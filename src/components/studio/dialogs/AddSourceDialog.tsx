@@ -1,0 +1,9 @@
+"use client";
+import { Camera, MonitorUp as Display, FileAudio, FolderTree, Image, Mic, MonitorPlay, Palette, Type, Video } from "lucide-react";
+import type { SourceType } from "@/types/studio";
+import { Modal } from "../common/Modal";
+
+const choices: { type: SourceType; label: string; description: string; icon: typeof Camera }[] = [
+  { type: "display", label: "Display Capture", description: "Capture a screen, window, or tab", icon: Display }, { type: "webcam", label: "Webcam", description: "Add a connected camera", icon: Camera }, { type: "microphone", label: "Microphone", description: "Add an audio input", icon: Mic }, { type: "image", label: "Image", description: "PNG, JPEG, GIF, or WebP", icon: Image }, { type: "video", label: "Video", description: "Add a local video file", icon: Video }, { type: "text", label: "Text", description: "Rendered text overlay", icon: Type }, { type: "browser", label: "Browser Source", description: "Represent an embeddable web page", icon: MonitorPlay }, { type: "color", label: "Color Source", description: "Solid color layer", icon: Palette }, { type: "audio", label: "Audio File", description: "Add a local audio track", icon: FileAudio }, { type: "group", label: "Group", description: "Organize multiple sources", icon: FolderTree },
+];
+export function AddSourceDialog({ onAdd, onClose }: { onAdd(type: SourceType): void; onClose(): void }) { return <Modal title="Add Source" onClose={onClose} width={560}><div className="sf-source-grid">{choices.map(({ type, label, description, icon: Icon }) => <button key={type} onClick={() => onAdd(type)}><Icon size={19}/><span><strong>{label}</strong><small>{description}</small></span></button>)}</div><p className="sf-note">Capture sources always require explicit browser permission. Media stays on this device.</p></Modal>; }

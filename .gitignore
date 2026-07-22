@@ -1,0 +1,31 @@
+# Dependencies
+/node_modules/
+/.pnp/
+.pnp.*
+
+# Next.js
+/.next/
+/out/
+/build/
+next-env.d.ts
+
+# Tests and tooling
+/coverage/
+/test-results/
+/playwright-report/
+*.tsbuildinfo
+
+# Local configuration and logs
+.env*
+!.env.example
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.vercel/
+.DS_Store
+*.pem
+
+# Inherited local assets replaced by the StreamForge SVG icon
+/src/app/favicon.ico
+/src/app/icon.png
