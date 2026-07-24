@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      SITE_URL: https://streamforge.vercel.app
+      SITE_URL: https://streamforgeapp.vercel.app
     steps:
       - name: Verify public routes and crawlability
         shell: bash

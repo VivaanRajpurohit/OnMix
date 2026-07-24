@@ -7,7 +7,7 @@
 
 StreamForge Studio is a production-minded, browser-based composition and recording workspace. It brings an OBS-inspired desktop workflow to the web while keeping projects, capture streams, uploaded media, and recordings on the user's device.
 
-**Live app:** [streamforge.vercel.app](https://streamforge.vercel.app)
+**Live app:** [streamforgeapp.vercel.app](https://streamforgeapp.vercel.app)
 
 ![StreamForge Studio interface](./docs/images/streamforge-studio.png)
 
