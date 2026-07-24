@@ -14,6 +14,7 @@ export const metadata: Metadata = {
   creator: "Vivaan Rajpurohit",
   publisher: "OnMix",
   alternates: { canonical: "/" },
+  verification: { google: "XxSJDevDde_Bb1--E1hu_H45oIuNnyw2KM2A9wFQnMg" },
   icons: { icon: "/onmix-logo.png", apple: "/onmix-logo.png" },
   manifest: "/manifest.webmanifest",
   openGraph: {
