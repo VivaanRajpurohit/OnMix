@@ -1,6 +1,7 @@
 name: Production smoke
 
 on:
+  pull_request:
   workflow_dispatch:
 
 permissions:
