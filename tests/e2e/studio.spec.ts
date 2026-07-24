@@ -7,9 +7,40 @@ test.beforeEach(async ({ page }) => {
 
 test("app loads directly into the studio with default scenes", async ({ page }) => {
   await expect(page.locator(".sf-titlebar")).toContainText("StreamForge Studio");
+  await expect(page.locator(".sf-window-controls")).toHaveCount(0);
   await expect(page.getByRole("navigation", { name: "Application menu" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Scenes" })).toBeVisible();
   await expect(page.getByText("Main Scene", { exact: true })).toBeVisible();
+});
+
+test("settings remain drafts until Apply and support keyboard category navigation", async ({ page }) => {
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Settings" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toHaveCSS("width", "960px");
+  await expect(dialog.getByRole("button", { name: "Apply" })).toBeDisabled();
+
+  const language = dialog.getByLabel("Language");
+  await language.focus();
+  await page.waitForTimeout(750);
+  await expect(language).toBeFocused();
+
+  const generalTab = dialog.getByRole("tab", { name: "General" });
+  await generalTab.focus();
+  await generalTab.press("ArrowDown");
+  await expect(dialog.getByRole("tab", { name: "Stream" })).toHaveAttribute("aria-selected", "true");
+  await dialog.getByRole("tab", { name: "Video" }).click();
+  await dialog.getByLabel("Base canvas").selectOption("3840x2160");
+  await dialog.getByLabel("Target FPS").selectOption("120");
+
+  const toolbar = page.locator(".sf-output-config");
+  await expect(toolbar.getByLabel("Canvas resolution")).toHaveValue("1920x1080");
+  await expect(toolbar.getByLabel("Target FPS")).toHaveValue("30");
+  await dialog.getByRole("button", { name: "Apply" }).click();
+  await expect(toolbar.getByLabel("Canvas resolution")).toHaveValue("3840x2160");
+  await expect(toolbar.getByLabel("Target FPS")).toHaveValue("120");
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Apply" })).toBeDisabled();
 });
 
 test("scene and text source can be added", async ({ page }) => {
@@ -52,4 +83,13 @@ test("resized dock widths persist after reload", async ({ page }) => {
   await expect(scenesDock).toBeVisible();
   const after = await scenesDock.evaluate((element) => element.getBoundingClientRect().width);
   expect(after).toBeGreaterThan(before + 45);
+});
+
+test("canvas and target FPS selectors support 4K at 120 FPS", async ({ page }) => {
+  await page.getByLabel("Canvas resolution").selectOption("3840x2160");
+  await page.getByLabel("Target FPS").selectOption("120");
+  await expect(page.locator(".sf-status")).toContainText("3840 × 2160");
+  await expect(page.locator(".sf-status")).toContainText("120.00 / 120.00 FPS");
+  await expect(page.locator("canvas")).toHaveAttribute("width", "3840");
+  await expect(page.locator("canvas")).toHaveAttribute("height", "2160");
 });

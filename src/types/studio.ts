@@ -66,13 +66,24 @@ export type StudioSource = TextSource | ColorSource | BrowserSource | MediaSourc
 
 export interface Scene { id: string; name: string; sourceIds: string[] }
 export type TransitionType = "cut" | "fade" | "slide-left" | "slide-right" | "dip-black";
+export type FrameRate = 24 | 25 | 30 | 50 | 60 | 120;
+export interface StudioPreferences {
+  general: { language: "English"; theme: "Dark"; uiScale: 90 | 100 | 110; autosave: boolean; reopenPrevious: boolean; confirmRemove: boolean };
+  stream: { serverUrl: string; authToken: string };
+  output: { recordingQuality: "balanced" | "high" | "lossless"; fileNamePattern: string; overwriteProtection: boolean };
+  audio: { channelLayout: "Stereo"; meterDecay: "Fast" | "Medium" | "Slow"; monitoringDevice: "Default" };
+  video: { scaleFilter: "Bilinear" | "Bicubic" | "Lanczos" };
+  hotkeys: { startStopRecording: string; pauseRecording: string; studioMode: string; transition: string; muteMic: string };
+  accessibility: { reducedMotion: boolean; highContrast: boolean; alwaysShowFocus: boolean; announceStatus: boolean };
+  advanced: { renderer: "Canvas 2D"; hardwareAcceleration: boolean; colorSpace: "sRGB" | "Display P3"; persistProject: boolean; retainMediaMetadata: boolean };
+}
 export interface StudioProject {
   id: string;
   version: number;
   name: string;
   createdAt: string;
   updatedAt: string;
-  canvas: { width: number; height: number; fps: 24 | 30 | 60 };
+  canvas: { width: number; height: number; fps: FrameRate };
   scenes: Scene[];
   sources: Record<string, StudioSource>;
   selectedSceneId: string;
@@ -85,8 +96,9 @@ export interface StudioProject {
     quickStartDismissed: boolean;
     dockWidths?: number[];
     hiddenDocks?: string[];
+    preferences?: StudioPreferences;
   };
 }
 
 export interface RecordingResult { blob: Blob; filename: string; duration: number; mimeType: string }
-export type SaveState = "saved" | "saving" | "failed";
+export type SaveState = "saved" | "saving" | "unsaved" | "failed";

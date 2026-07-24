@@ -26,6 +26,6 @@ yarn-error.log*
 .DS_Store
 *.pem
 
-# Inherited local assets replaced by the StreamForge SVG icon
+# Inherited local assets replaced by the StreamForge brand asset
 /src/app/favicon.ico
 /src/app/icon.png

@@ -1,16 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { AlertTriangle, Check, Minus, Plus, Settings, ShieldCheck, SlidersHorizontal } from "lucide-react";
+import { AlertTriangle, Check, Maximize2, Minus, Plus, Settings, ShieldCheck, SlidersHorizontal } from "lucide-react";
 import { audioEngine } from "@/engine/media/AudioEngine";
 import { deviceManager } from "@/engine/media/DeviceManager";
 import { mediaRegistry } from "@/engine/media/MediaRuntimeRegistry";
 import { projectRepository } from "@/engine/persistence/ProjectRepository";
 import { recorderEngine } from "@/engine/recording/RecorderEngine";
 import { projectSchema } from "@/lib/validation";
+import { CANVAS_PRESETS, FRAME_RATES, fitToCanvas, resizeProjectCanvas } from "@/lib/videoPresets";
 import { useStudioStore } from "@/store/studioStore";
-import type { RecordingResult, SourceType, StudioProject } from "@/types/studio";
+import type { FrameRate, RecordingResult, SourceType, StudioProject } from "@/types/studio";
 import { DesktopMenu, type MenuAction } from "./common/DesktopMenu";
+import { BrandMark } from "./common/BrandMark";
 import { Modal } from "./common/Modal";
 import { AddSourceDialog } from "./dialogs/AddSourceDialog";
 import { FiltersDialog } from "./dialogs/FiltersDialog";
@@ -30,6 +32,17 @@ const subscribeToBrowserCapabilities = () => () => undefined;
 const getAudioSupportSnapshot = () => typeof AudioContext !== "undefined";
 const getServerAudioSupportSnapshot = () => false;
 const DEFAULT_DOCK_WIDTHS = [26, 22, 26, 11, 15];
+
+function waitForMetadata(element: HTMLMediaElement) {
+  if (element.readyState >= 1) return Promise.resolve();
+  return new Promise<void>((resolve, reject) => {
+    const cleanup = () => { element.removeEventListener("loadedmetadata", loaded); element.removeEventListener("error", failed); };
+    const loaded = () => { cleanup(); resolve(); };
+    const failed = () => { cleanup(); reject(new Error("The selected media file could not be loaded.")); };
+    element.addEventListener("loadedmetadata", loaded, { once: true });
+    element.addEventListener("error", failed, { once: true });
+  });
+}
 
 export function StudioShell() {
   const project = useStudioStore((state) => state.project);
@@ -63,7 +76,7 @@ export function StudioShell() {
     let active = true;
     const timeout = new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 1500));
     Promise.race([projectRepository.load(), timeout])
-      .then((saved) => { if (active && saved) useStudioStore.getState().setProject(saved); })
+      .then((saved) => { if (active && saved && saved.ui.preferences?.general.reopenPrevious !== false) useStudioStore.getState().setProject(saved); })
       .catch(() => { if (active) notify("IndexedDB is unavailable. Changes will not persist.", "error"); })
       .finally(() => { if (active) setLoaded(true); });
     return () => { active = false; mediaRegistry.clear(); audioEngine.dispose(); };
@@ -71,12 +84,16 @@ export function StudioShell() {
 
   useEffect(() => {
     if (!loaded || saveState !== "saving") return;
+    if (project.ui.preferences?.advanced.persistProject === false) {
+      useStudioStore.getState().setSaveState("unsaved");
+      return;
+    }
     const timer = window.setTimeout(async () => {
       try { await projectRepository.save(useStudioStore.getState().project); useStudioStore.getState().setSaveState("saved"); }
       catch { useStudioStore.getState().setSaveState("failed"); notify("Project save failed. Check browser storage permissions.", "error"); }
     }, 500);
     return () => window.clearTimeout(timer);
-  }, [loaded, notify, project.updatedAt, saveState]);
+  }, [loaded, notify, project.ui.preferences?.advanced.persistProject, project.updatedAt, saveState]);
 
   useEffect(() => {
     if (recording.state === "recording") elapsedTimer.current = window.setInterval(() => { const current = useStudioStore.getState().recording; useStudioStore.getState().setRecording({ ...current, elapsed: current.elapsed + 1 }); }, 1000);
@@ -126,7 +143,14 @@ export function StudioShell() {
       const stream = pendingType === "display" ? await deviceManager.display(false) : pendingType === "webcam" ? await deviceManager.webcam() : await deviceManager.microphone();
       id = useStudioStore.getState().addSource(pendingType);
       const video = pendingType !== "microphone" ? document.createElement("video") : undefined;
-      if (video) { video.srcObject = stream; video.muted = true; video.playsInline = true; await video.play(); }
+      if (video) {
+        video.srcObject = stream;
+        video.muted = true;
+        video.playsInline = true;
+        await video.play();
+        const canvas = useStudioStore.getState().project.canvas;
+        useStudioStore.getState().updateTransform(id, fitToCanvas(video.videoWidth, video.videoHeight, canvas.width, canvas.height));
+      }
       mediaRegistry.set(id, { stream, element: video });
       if (stream.getAudioTracks().length) audioEngine.attach(id);
       stream.getTracks().forEach((track) => track.addEventListener("ended", () => useStudioStore.getState().updateSource(id!, { disconnected: true })));
@@ -143,12 +167,14 @@ export function StudioShell() {
     const id = useStudioStore.getState().addSource(type);
     const url = URL.createObjectURL(file);
     if (type === "image") {
-      const image = new Image(); image.src = url; await image.decode(); mediaRegistry.set(id, { element: image, objectUrl: url }); useStudioStore.getState().updateTransform(id, { width: image.naturalWidth, height: image.naturalHeight });
+      const image = new Image(); image.src = url; await image.decode(); mediaRegistry.set(id, { element: image, objectUrl: url }); const canvas = useStudioStore.getState().project.canvas; useStudioStore.getState().updateTransform(id, fitToCanvas(image.naturalWidth, image.naturalHeight, canvas.width, canvas.height));
     } else {
       const element = document.createElement(type === "audio" ? "audio" : "video"); element.src = url; element.loop = true;
       if (type === "video") { (element as HTMLVideoElement).muted = true; (element as HTMLVideoElement).playsInline = true; }
+      await waitForMetadata(element);
       await element.play().catch(() => undefined);
       mediaRegistry.set(id, { element, objectUrl: url });
+      if (type === "video") { const video = element as HTMLVideoElement; const canvas = useStudioStore.getState().project.canvas; useStudioStore.getState().updateTransform(id, fitToCanvas(video.videoWidth, video.videoHeight, canvas.width, canvas.height)); }
       if (type === "audio") { const stream = (element as HTMLAudioElement & { captureStream?: () => MediaStream }).captureStream?.(); if (stream) { mediaRegistry.set(id, { element, objectUrl: url, stream }); audioEngine.attach(id); } }
     }
     useStudioStore.getState().updateSource(id, { fileName: file.name } as never);
@@ -205,12 +231,18 @@ export function StudioShell() {
     return () => document.removeEventListener("keydown", hotkeys);
   }, [save]);
 
-  const setResolution = (width: number, height: number) => useStudioStore.getState().commit((current) => ({ ...current, canvas: { ...current.canvas, width, height } }));
+  const setResolution = (width: number, height: number) => useStudioStore.getState().commit((current) => resizeProjectCanvas(current, width, height));
+  const setFrameRate = (fps: FrameRate) => useStudioStore.getState().commit((current) => ({ ...current, canvas: { ...current.canvas, fps } }));
+  const fitSelectedSource = () => {
+    if (!selectedSource) return;
+    const { width, height } = selectedSource.transform;
+    useStudioStore.getState().updateTransform(selectedSource.id, fitToCanvas(width, height, project.canvas.width, project.canvas.height));
+  };
   const toggleDock = (id: string) => useStudioStore.getState().commit((current) => { const hidden = current.ui.hiddenDocks ?? []; return { ...current, ui: { ...current.ui, hiddenDocks: hidden.includes(id) ? hidden.filter((dock) => dock !== id) : [...hidden, id] } }; });
   const resetDockLayout = () => useStudioStore.getState().commit((current) => ({ ...current, ui: { ...current.ui, dockWidths: DEFAULT_DOCK_WIDTHS, hiddenDocks: [] } }));
   const fileMenu: MenuAction[] = [{ label: "New Project", shortcut: "Ctrl+N", action: () => useStudioStore.getState().newProject() }, { label: "Open Project", action: () => importRef.current?.click() }, { label: "Save Project", shortcut: "Ctrl+S", action: () => void save() }, { label: "Save Project As", action: exportProject }, { label: "", divider: true }, { label: "Import Project", action: () => importRef.current?.click() }, { label: "Export Project", action: exportProject }, { label: "Settings", action: () => setDialog("settings") }];
   const editMenu: MenuAction[] = [{ label: "Undo", shortcut: "Ctrl+Z", action: () => useStudioStore.getState().undo() }, { label: "Redo", shortcut: "Ctrl+Shift+Z", action: () => useStudioStore.getState().redo() }, { label: "", divider: true }, { label: "Copy", shortcut: "Ctrl+C", action: () => useStudioStore.getState().copy() }, { label: "Paste", shortcut: "Ctrl+V", action: () => useStudioStore.getState().paste() }, { label: "Duplicate", shortcut: "Ctrl+D", action: () => useStudioStore.getState().duplicateSelected() }, { label: "Remove", shortcut: "Delete", action: () => useStudioStore.getState().removeSelectedSources() }];
-  const viewMenu: MenuAction[] = [{ label: "Fullscreen Preview", action: () => document.documentElement.requestFullscreen?.() }, { label: "", divider: true }, { label: `${project.ui.snap ? "✓ " : ""}Snap Sources`, action: () => useStudioStore.getState().commit((current) => ({ ...current, ui: { ...current.ui, snap: !current.ui.snap } })) }, { label: `${project.ui.showGrid ? "✓ " : ""}Thirds Grid`, action: () => useStudioStore.getState().commit((current) => ({ ...current, ui: { ...current.ui, showGrid: !current.ui.showGrid } })) }, { label: `${project.ui.showSafeArea ? "✓ " : ""}Safe Areas`, action: () => useStudioStore.getState().commit((current) => ({ ...current, ui: { ...current.ui, showSafeArea: !current.ui.showSafeArea } })) }, { label: "", divider: true }, { label: "Canvas: 1920 × 1080", action: () => setResolution(1920, 1080) }, { label: "Canvas: 1280 × 720", action: () => setResolution(1280, 720) }];
+  const viewMenu: MenuAction[] = [{ label: "Fullscreen Preview", action: () => document.documentElement.requestFullscreen?.() }, { label: "", divider: true }, { label: `${project.ui.snap ? "✓ " : ""}Snap Sources`, action: () => useStudioStore.getState().commit((current) => ({ ...current, ui: { ...current.ui, snap: !current.ui.snap } })) }, { label: `${project.ui.showGrid ? "✓ " : ""}Thirds Grid`, action: () => useStudioStore.getState().commit((current) => ({ ...current, ui: { ...current.ui, showGrid: !current.ui.showGrid } })) }, { label: `${project.ui.showSafeArea ? "✓ " : ""}Safe Areas`, action: () => useStudioStore.getState().commit((current) => ({ ...current, ui: { ...current.ui, showSafeArea: !current.ui.showSafeArea } })) }, { label: "", divider: true }, ...CANVAS_PRESETS.map((preset) => ({ label: `Canvas: ${preset.label}`, action: () => setResolution(preset.width, preset.height) }))];
   const dockNames = [["scenes", "Scenes"], ["sources", "Sources"], ["mixer", "Audio Mixer"], ["transitions", "Scene Transitions"], ["controls", "Controls"]] as const;
   const docksMenu: MenuAction[] = [...dockNames.map(([id, label]) => ({ label: `${project.ui.hiddenDocks?.includes(id) ? "" : "✓ "}${label}`, action: () => toggleDock(id) })), { label: "", divider: true }, { label: "Reset Dock Layout", action: resetDockLayout }];
   const dockItems: DockItem[] = [
@@ -224,19 +256,36 @@ export function StudioShell() {
   const zoomLabel = previewZoom === "fit" ? "Fit" : `${previewZoom}%`;
   const adjustZoom = (direction: -1 | 1) => { const stops = [25, 50, 75, 100, 150, 200]; const current = previewZoom === "fit" ? 50 : previewZoom; const index = stops.findIndex((value) => value >= current); setPreviewZoom(stops[Math.max(0, Math.min(stops.length - 1, index + direction))]); };
 
-  if (!loaded) return <main className="sf-loading"><div className="sf-logo-mark">SF</div><p>Loading StreamForge Studio…</p></main>;
+  if (!loaded) return <main className="sf-loading"><BrandMark className="sf-logo-mark" size={46} priority/><p>Loading StreamForge Studio…</p></main>;
 
-  return <main className="sf-app">
+  const accessibility = project.ui.preferences?.accessibility;
+  const appClassName = [
+    "sf-app",
+    accessibility?.reducedMotion && "sf-reduced-motion",
+    accessibility?.highContrast && "sf-high-contrast",
+    accessibility?.alwaysShowFocus && "sf-always-focus",
+  ].filter(Boolean).join(" ");
+
+  return <main className={appClassName}>
     <header className="sf-topbar">
-      <div className="sf-titlebar"><div className="sf-brand"><span>SF</span>StreamForge Studio — Profile: Default — Scenes: {project.name}</div><div className="sf-title-metrics">FPS {project.canvas.fps} &nbsp;|&nbsp; Render {renderTime.toFixed(1)} ms</div><div className="sf-window-controls" aria-hidden="true"><span>—</span><span>□</span><span>×</span></div></div>
-      <nav className="sf-menubar" aria-label="Application menu"><DesktopMenu label="File" items={fileMenu}/><DesktopMenu label="Edit" items={editMenu}/><DesktopMenu label="View" items={viewMenu}/><DesktopMenu label="Docks" items={docksMenu}/><DesktopMenu label="Profile" items={[{ label: "Default", disabled: true }, { label: "Manage Profiles", action: () => setDialog("settings") }]}/><DesktopMenu label="Scene Collection" items={[{ label: "New Collection", action: () => useStudioStore.getState().newProject() }, { label: "Rename Collection", disabled: true }, { label: "Duplicate Collection", disabled: true }]}/><DesktopMenu label="Tools" items={[{ label: "Output Diagnostics", action: () => setDialog("compat") }, { label: "Browser Compatibility", action: () => setDialog("compat") }, { label: "Keyboard Shortcuts", action: () => setDialog("settings") }]}/><DesktopMenu label="Help" items={[{ label: "Documentation", action: () => notify("See README.md for documentation.") }, { label: "Browser Permissions Help", action: () => setDialog("compat") }, { label: "About StreamForge Studio", action: () => setDialog("about") }]}/><span className={`sf-save ${saveState}`}>{saveState === "saving" ? "Saving…" : saveState === "failed" ? "Save failed" : "Saved"}</span></nav>
+      <div className="sf-titlebar"><div className="sf-brand"><BrandMark className="sf-brand-mark" size={17} priority/>StreamForge Studio — Profile: Default — Scenes: {project.name}</div><div className="sf-title-metrics">FPS {project.canvas.fps} &nbsp;|&nbsp; Render {renderTime.toFixed(1)} ms</div></div>
+      <nav className="sf-menubar" aria-label="Application menu"><DesktopMenu label="File" items={fileMenu}/><DesktopMenu label="Edit" items={editMenu}/><DesktopMenu label="View" items={viewMenu}/><DesktopMenu label="Docks" items={docksMenu}/><DesktopMenu label="Profile" items={[{ label: "Default", disabled: true }, { label: "Manage Profiles", action: () => setDialog("settings") }]}/><DesktopMenu label="Scene Collection" items={[{ label: "New Collection", action: () => useStudioStore.getState().newProject() }, { label: "Rename Collection", disabled: true }, { label: "Duplicate Collection", disabled: true }]}/><DesktopMenu label="Tools" items={[{ label: "Output Diagnostics", action: () => setDialog("compat") }, { label: "Browser Compatibility", action: () => setDialog("compat") }, { label: "Keyboard Shortcuts", action: () => setDialog("settings") }]}/><DesktopMenu label="Help" items={[{ label: "Documentation", action: () => notify("See README.md for documentation.") }, { label: "Browser Permissions Help", action: () => setDialog("compat") }, { label: "About StreamForge Studio", action: () => setDialog("about") }]}/><span className={`sf-save ${saveState}`} role={accessibility?.announceStatus ? "status" : undefined}>{saveState === "saving" ? "Saving…" : saveState === "unsaved" ? "Unsaved" : saveState === "failed" ? "Save failed" : "Saved"}</span></nav>
     </header>
     <section className={`sf-preview ${studioMode ? "studio" : ""}`}>
       {studioMode && <OutputCanvas sceneId={previewSceneId || project.selectedSceneId} label="PREVIEW" zoom={previewZoom}/>} 
       <OutputCanvas sceneId={studioMode ? (programSceneId || project.selectedSceneId) : project.selectedSceneId} label={studioMode ? "PROGRAM" : undefined} interactive={!studioMode} zoom={previewZoom} onCanvas={(canvas) => { outputCanvas.current = canvas; }} onMetrics={(_fps, render) => setRenderTime(render)}/>
       <div className="sf-preview-zoom"><button onClick={() => adjustZoom(-1)} aria-label="Zoom out"><Minus/></button><span>{zoomLabel}</span><button onClick={() => adjustZoom(1)} aria-label="Zoom in"><Plus/></button><select aria-label="Preview scaling" value={previewZoom} onChange={(event) => setPreviewZoom(event.target.value === "fit" ? "fit" : Number(event.target.value))}><option value="fit">Scale to Window</option><option value="25">25%</option><option value="50">50%</option><option value="75">75%</option><option value="100">100%</option></select></div>
     </section>
-    <div className="sf-source-action"><span>{selectedSource ? selectedSource.name : "No source selected"}</span><button disabled={!selectedSource} onClick={() => setDialog("properties")}><Settings/>Properties</button><button disabled={!selectedSource} onClick={() => setDialog("filters")}><SlidersHorizontal/>Filters</button></div>
+    <div className="sf-source-action">
+      <span>{selectedSource ? selectedSource.name : "No source selected"}</span>
+      <button disabled={!selectedSource} onClick={() => setDialog("properties")}><Settings/>Properties</button>
+      <button disabled={!selectedSource} onClick={() => setDialog("filters")}><SlidersHorizontal/>Filters</button>
+      <button disabled={!selectedSource} onClick={fitSelectedSource}><Maximize2/>Fit Canvas</button>
+      <div className="sf-output-config">
+        <label><span>Canvas</span><select aria-label="Canvas resolution" value={`${project.canvas.width}x${project.canvas.height}`} onChange={(event) => { const [width, height] = event.target.value.split("x").map(Number); setResolution(width, height); }}>{CANVAS_PRESETS.map((preset) => <option key={`${preset.width}x${preset.height}`} value={`${preset.width}x${preset.height}`}>{preset.label}</option>)}</select></label>
+        <label><span>FPS</span><select aria-label="Target FPS" value={project.canvas.fps} onChange={(event) => setFrameRate(Number(event.target.value) as FrameRate)}>{FRAME_RATES.map((fps) => <option key={fps} value={fps}>{fps}</option>)}</select></label>
+      </div>
+    </div>
     <DockRegion items={dockItems}/>
     <footer className="sf-status"><div><span>LIVE: Off</span><span className={recording.state !== "idle" ? "rec" : ""}>{recording.state !== "idle" ? <><i/>REC: {formatTime(recording.elapsed)}</> : "REC: 00:00:00"}</span></div><div><span>Audio: {audioSupported ? "OK" : "Unavailable"}</span><span>Render: {renderTime.toFixed(1)} ms</span><span>{project.canvas.width} × {project.canvas.height}</span><span>{project.canvas.fps.toFixed(2)} / {project.canvas.fps.toFixed(2)} FPS</span><span className="sf-compat-status"><Check/> Ready</span></div></footer>
     <input hidden ref={importRef} type="file" accept="application/json,.json" onChange={(event) => void importProject(event.target.files?.[0])}/><input hidden ref={mediaRef} type="file" accept={pendingType === "image" ? "image/*" : pendingType === "video" ? "video/*" : "audio/*"} onChange={(event) => void addMedia(event.target.files?.[0])}/>
@@ -247,7 +296,7 @@ export function StudioShell() {
     {dialog === "permission" && <Modal title="Browser permission required" onClose={() => setDialog(null)}><div className="sf-permission"><ShieldCheck/><p>StreamForge will ask the browser for access to your {pendingType}. You choose what to share, and captured media is never uploaded.</p></div><div className="sf-dialog-actions"><button onClick={() => setDialog(null)}>Cancel</button><button className="sf-primary" onClick={() => void capture()}>Continue</button></div></Modal>}
     {dialog === "recording" && result && <Modal title="Recording complete" onClose={() => setDialog(null)}><dl className="sf-recording-result"><div><dt>Filename</dt><dd>{result.filename}</dd></div><div><dt>Duration</dt><dd>{(result.duration / 1000).toFixed(1)} seconds</dd></div><div><dt>Format</dt><dd>{result.mimeType}</dd></div><div><dt>Size</dt><dd>{(result.blob.size / 1024 / 1024).toFixed(2)} MB</dd></div></dl><div className="sf-dialog-actions"><button onClick={() => setDialog(null)}>Discard</button><button className="sf-primary" onClick={download}>Save Recording</button></div></Modal>}
     {dialog === "compat" && <Modal title="Browser compatibility" onClose={() => setDialog(null)}><p className="sf-note">Chrome and Edge provide the most complete capture support. Screen selection always happens in the browser permission dialog. System audio availability varies by platform.</p><button className="sf-primary" onClick={() => setDialog("settings")}>View diagnostics</button></Modal>}
-    {dialog === "about" && <Modal title="About StreamForge Studio" onClose={() => setDialog(null)}><div className="sf-about-mark">SF</div><h3>StreamForge Studio 0.1.0</h3><p className="sf-note">An original, local-first browser composition and recording tool. RTMP streaming requires an external backend.</p></Modal>}
+    {dialog === "about" && <Modal title="About StreamForge Studio" onClose={() => setDialog(null)}><BrandMark className="sf-about-mark"/><h3>StreamForge Studio 1.0.0</h3><p className="sf-note">An original, local-first browser composition and recording tool. RTMP streaming requires an external backend.</p></Modal>}
     <div className="sf-toasts" aria-live="polite">{toasts.map((toast) => <div className={toast.kind} key={toast.id}>{toast.kind === "error" ? <AlertTriangle/> : <Check/>}{toast.text}</div>)}</div><div className="sf-small-warning"><AlertTriangle/>StreamForge Studio requires a desktop viewport of at least 1280 px.</div>
   </main>;
 }
