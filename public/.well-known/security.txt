@@ -1,5 +1,5 @@
-Contact: https://github.com/VivaanRajpurohit/StreamForge-Studio/security/advisories/new
+Contact: https://github.com/VivaanRajpurohit/OnMix/security/advisories/new
 Expires: 2027-07-24T23:59:59.000Z
 Preferred-Languages: en
-Canonical: https://streamforgeapp.vercel.app/.well-known/security.txt
-Policy: https://github.com/VivaanRajpurohit/StreamForge-Studio/security/policy
+Canonical: https://onmix.vercel.app/.well-known/security.txt
+Policy: https://github.com/VivaanRajpurohit/OnMix/security/policy

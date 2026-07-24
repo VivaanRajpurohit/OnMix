@@ -26,7 +26,7 @@ yarn-error.log*
 .DS_Store
 *.pem
 
-# Inherited local assets replaced by the StreamForge brand asset
+# Inherited local assets replaced by the OnMix brand asset
 /src/app/favicon.ico
 /src/app/icon.png
 

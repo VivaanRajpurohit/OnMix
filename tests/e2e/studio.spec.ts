@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("app loads directly into the studio with default scenes", async ({ page }) => {
-  await expect(page.locator(".sf-titlebar")).toContainText("StreamForge Studio");
+  await expect(page.locator(".sf-titlebar")).toContainText("OnMix");
   await expect(page.locator(".sf-window-controls")).toHaveCount(0);
   await expect(page.getByRole("navigation", { name: "Application menu" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Scenes" })).toBeVisible();
@@ -57,7 +57,7 @@ test("project export downloads JSON", async ({ page }) => {
   await page.getByRole("button", { name: "File", exact: true }).click();
   const download = page.waitForEvent("download");
   await page.getByRole("menuitem", { name: "Export Project" }).click();
-  expect((await download).suggestedFilename()).toContain("streamforge.json");
+  expect((await download).suggestedFilename()).toContain("onmix.json");
 });
 
 test("invalid project import shows a useful error", async ({ page }) => {

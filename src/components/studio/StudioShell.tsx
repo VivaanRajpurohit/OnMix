@@ -117,7 +117,7 @@ export function StudioShell() {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `${project.name.replace(/[^a-z0-9-_]+/gi, "_")}.streamforge.json`;
+    anchor.download = `${project.name.replace(/[^a-z0-9-_]+/gi, "_")}.onmix.json`;
     anchor.click();
     URL.revokeObjectURL(url);
   }, [project.name]);
@@ -125,7 +125,7 @@ export function StudioShell() {
   const importProject = async (file?: File) => {
     if (!file) return;
     try { useStudioStore.getState().setProject(projectSchema.parse(JSON.parse(await file.text())) as StudioProject); notify("Project imported successfully."); }
-    catch { notify("Import failed. The file is not a valid StreamForge project.", "error"); }
+    catch { notify("Import failed. The file is not a valid OnMix project.", "error"); }
   };
 
   const addSource = (type: SourceType) => {
@@ -256,7 +256,7 @@ export function StudioShell() {
   const zoomLabel = previewZoom === "fit" ? "Fit" : `${previewZoom}%`;
   const adjustZoom = (direction: -1 | 1) => { const stops = [25, 50, 75, 100, 150, 200]; const current = previewZoom === "fit" ? 50 : previewZoom; const index = stops.findIndex((value) => value >= current); setPreviewZoom(stops[Math.max(0, Math.min(stops.length - 1, index + direction))]); };
 
-  if (!loaded) return <main className="sf-loading"><BrandMark className="sf-logo-mark" size={46} priority/><p>Loading StreamForge Studio…</p></main>;
+  if (!loaded) return <main className="sf-loading"><BrandMark className="sf-logo-mark" size={46} priority/><p>Loading OnMix…</p></main>;
 
   const accessibility = project.ui.preferences?.accessibility;
   const appClassName = [
@@ -268,8 +268,8 @@ export function StudioShell() {
 
   return <main className={appClassName}>
     <header className="sf-topbar">
-      <div className="sf-titlebar"><div className="sf-brand"><BrandMark className="sf-brand-mark" size={17} priority/>StreamForge Studio — Profile: Default — Scenes: {project.name}</div><div className="sf-title-metrics">FPS {project.canvas.fps} &nbsp;|&nbsp; Render {renderTime.toFixed(1)} ms</div></div>
-      <nav className="sf-menubar" aria-label="Application menu"><DesktopMenu label="File" items={fileMenu}/><DesktopMenu label="Edit" items={editMenu}/><DesktopMenu label="View" items={viewMenu}/><DesktopMenu label="Docks" items={docksMenu}/><DesktopMenu label="Profile" items={[{ label: "Default", disabled: true }, { label: "Manage Profiles", action: () => setDialog("settings") }]}/><DesktopMenu label="Scene Collection" items={[{ label: "New Collection", action: () => useStudioStore.getState().newProject() }, { label: "Rename Collection", disabled: true }, { label: "Duplicate Collection", disabled: true }]}/><DesktopMenu label="Tools" items={[{ label: "Output Diagnostics", action: () => setDialog("compat") }, { label: "Browser Compatibility", action: () => setDialog("compat") }, { label: "Keyboard Shortcuts", action: () => setDialog("settings") }]}/><DesktopMenu label="Help" items={[{ label: "Documentation", action: () => notify("See README.md for documentation.") }, { label: "Browser Permissions Help", action: () => setDialog("compat") }, { label: "About StreamForge Studio", action: () => setDialog("about") }]}/><span className={`sf-save ${saveState}`} role={accessibility?.announceStatus ? "status" : undefined}>{saveState === "saving" ? "Saving…" : saveState === "unsaved" ? "Unsaved" : saveState === "failed" ? "Save failed" : "Saved"}</span></nav>
+      <div className="sf-titlebar"><div className="sf-brand"><BrandMark className="sf-brand-mark" size={17} priority/>OnMix — Profile: Default — Scenes: {project.name}</div><div className="sf-title-metrics">FPS {project.canvas.fps} &nbsp;|&nbsp; Render {renderTime.toFixed(1)} ms</div></div>
+      <nav className="sf-menubar" aria-label="Application menu"><DesktopMenu label="File" items={fileMenu}/><DesktopMenu label="Edit" items={editMenu}/><DesktopMenu label="View" items={viewMenu}/><DesktopMenu label="Docks" items={docksMenu}/><DesktopMenu label="Profile" items={[{ label: "Default", disabled: true }, { label: "Manage Profiles", action: () => setDialog("settings") }]}/><DesktopMenu label="Scene Collection" items={[{ label: "New Collection", action: () => useStudioStore.getState().newProject() }, { label: "Rename Collection", disabled: true }, { label: "Duplicate Collection", disabled: true }]}/><DesktopMenu label="Tools" items={[{ label: "Output Diagnostics", action: () => setDialog("compat") }, { label: "Browser Compatibility", action: () => setDialog("compat") }, { label: "Keyboard Shortcuts", action: () => setDialog("settings") }]}/><DesktopMenu label="Help" items={[{ label: "Documentation", action: () => notify("See README.md for documentation.") }, { label: "Browser Permissions Help", action: () => setDialog("compat") }, { label: "About OnMix", action: () => setDialog("about") }]}/><span className={`sf-save ${saveState}`} role={accessibility?.announceStatus ? "status" : undefined}>{saveState === "saving" ? "Saving…" : saveState === "unsaved" ? "Unsaved" : saveState === "failed" ? "Save failed" : "Saved"}</span></nav>
     </header>
     <section className={`sf-preview ${studioMode ? "studio" : ""}`}>
       {studioMode && <OutputCanvas sceneId={previewSceneId || project.selectedSceneId} label="PREVIEW" zoom={previewZoom}/>} 
@@ -293,10 +293,10 @@ export function StudioShell() {
     {dialog === "settings" && <SettingsDialog onClose={() => setDialog(null)}/>} 
     {dialog === "filters" && <FiltersDialog onClose={() => setDialog(null)}/>} 
     {dialog === "properties" && <Modal title={selectedSource ? `Properties for ${selectedSource.name}` : "Source Properties"} onClose={() => setDialog(null)} width={700}><PropertiesPanel/></Modal>}
-    {dialog === "permission" && <Modal title="Browser permission required" onClose={() => setDialog(null)}><div className="sf-permission"><ShieldCheck/><p>StreamForge will ask the browser for access to your {pendingType}. You choose what to share, and captured media is never uploaded.</p></div><div className="sf-dialog-actions"><button onClick={() => setDialog(null)}>Cancel</button><button className="sf-primary" onClick={() => void capture()}>Continue</button></div></Modal>}
+    {dialog === "permission" && <Modal title="Browser permission required" onClose={() => setDialog(null)}><div className="sf-permission"><ShieldCheck/><p>OnMix will ask the browser for access to your {pendingType}. You choose what to share, and captured media is never uploaded.</p></div><div className="sf-dialog-actions"><button onClick={() => setDialog(null)}>Cancel</button><button className="sf-primary" onClick={() => void capture()}>Continue</button></div></Modal>}
     {dialog === "recording" && result && <Modal title="Recording complete" onClose={() => setDialog(null)}><dl className="sf-recording-result"><div><dt>Filename</dt><dd>{result.filename}</dd></div><div><dt>Duration</dt><dd>{(result.duration / 1000).toFixed(1)} seconds</dd></div><div><dt>Format</dt><dd>{result.mimeType}</dd></div><div><dt>Size</dt><dd>{(result.blob.size / 1024 / 1024).toFixed(2)} MB</dd></div></dl><div className="sf-dialog-actions"><button onClick={() => setDialog(null)}>Discard</button><button className="sf-primary" onClick={download}>Save Recording</button></div></Modal>}
     {dialog === "compat" && <Modal title="Browser compatibility" onClose={() => setDialog(null)}><p className="sf-note">Chrome and Edge provide the most complete capture support. Screen selection always happens in the browser permission dialog. System audio availability varies by platform.</p><button className="sf-primary" onClick={() => setDialog("settings")}>View diagnostics</button></Modal>}
-    {dialog === "about" && <Modal title="About StreamForge Studio" onClose={() => setDialog(null)}><BrandMark className="sf-about-mark"/><h3>StreamForge Studio 1.0.0</h3><p className="sf-note">An original, local-first browser composition and recording tool. RTMP streaming requires an external backend.</p></Modal>}
-    <div className="sf-toasts" aria-live="polite">{toasts.map((toast) => <div className={toast.kind} key={toast.id}>{toast.kind === "error" ? <AlertTriangle/> : <Check/>}{toast.text}</div>)}</div><div className="sf-small-warning"><AlertTriangle/>StreamForge Studio requires a desktop viewport of at least 1280 px.</div>
+    {dialog === "about" && <Modal title="About OnMix" onClose={() => setDialog(null)}><BrandMark className="sf-about-mark"/><h3>OnMix 1.0.0</h3><p className="sf-note">An original, local-first browser composition and recording tool. RTMP streaming requires an external backend.</p></Modal>}
+    <div className="sf-toasts" aria-live="polite">{toasts.map((toast) => <div className={toast.kind} key={toast.id}>{toast.kind === "error" ? <AlertTriangle/> : <Check/>}{toast.text}</div>)}</div><div className="sf-small-warning"><AlertTriangle/>OnMix requires a desktop viewport of at least 1280 px.</div>
   </main>;
 }

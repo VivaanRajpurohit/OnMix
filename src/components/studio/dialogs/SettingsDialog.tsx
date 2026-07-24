@@ -178,7 +178,7 @@ export function SettingsDialog({ onClose }: { onClose(): void }) {
             </>}
 
             {category === "stream" && <>
-              <div className="sf-settings-notice"><AlertTriangle/><div><strong>Streaming backend required</strong><p>StreamForge never stores RTMP credentials in the browser. Connect an authenticated WebRTC gateway to enable live output.</p></div></div>
+              <div className="sf-settings-notice"><AlertTriangle/><div><strong>Streaming backend required</strong><p>OnMix never stores RTMP credentials in the browser. Connect an authenticated WebRTC gateway to enable live output.</p></div></div>
               <SettingsSection title="Gateway">
                 <SettingRow label="Service"><select disabled><option>Custom WebRTC Gateway</option></select></SettingRow>
                 <SettingRow label="Secure server URL" help="Example: https://ingest.example.com"><input value={draft.stream.serverUrl} placeholder="https://" onChange={(event) => update("stream", { serverUrl: event.target.value })}/></SettingRow>
@@ -216,7 +216,7 @@ export function SettingsDialog({ onClose }: { onClose(): void }) {
                 <SettingRow label="Target FPS"><select value={draft.video.fps} onChange={(event) => update("video", { fps: Number(event.target.value) as FrameRate })}>{FRAME_RATES.map((fps) => <option value={fps} key={fps}>{fps} FPS</option>)}</select></SettingRow>
                 <SettingRow label="Scale filter" help="Used when media dimensions differ from the canvas."><select value={draft.video.scaleFilter} onChange={(event) => update("video", { scaleFilter: event.target.value as StudioPreferences["video"]["scaleFilter"] })}><option>Bilinear</option><option>Bicubic</option><option>Lanczos</option></select></SettingRow>
               </SettingsSection>
-              {draft.video.width === 3840 && draft.video.fps === 120 && <div className="sf-settings-notice warning"><AlertTriangle/><div><strong>High performance mode</strong><p>4K at 120 FPS can exceed browser, encoder, and display capabilities. StreamForge will request this target, but the browser may deliver fewer frames.</p></div></div>}
+              {draft.video.width === 3840 && draft.video.fps === 120 && <div className="sf-settings-notice warning"><AlertTriangle/><div><strong>High performance mode</strong><p>4K at 120 FPS can exceed browser, encoder, and display capabilities. OnMix will request this target, but the browser may deliver fewer frames.</p></div></div>}
               <p className="sf-settings-muted">Applying a new canvas size scales the current scene layout proportionally. New visual sources fit the canvas automatically.</p>
             </>}
 
@@ -244,9 +244,9 @@ export function SettingsDialog({ onClose }: { onClose(): void }) {
             </>}
 
             {category === "about" && <>
-              <div className="sf-settings-about"><BrandMark className="sf-about-mark"/><div><h4>StreamForge Studio</h4><p>Version 1.0.0 · Local-first browser production workspace</p></div></div>
+              <div className="sf-settings-about"><BrandMark className="sf-about-mark"/><div><h4>OnMix</h4><p>Version 1.0.0 · Local-first browser production workspace</p></div></div>
               <SettingsSection title="Runtime capabilities">{checkCompatibility().map((capability) => <div className="sf-capability" key={capability.name}><span>{capability.name}{!capability.required && " (enhancement)"}</span><b className={capability.supported ? "ok" : "bad"}>{capability.supported ? <><Check/>Available</> : "Unavailable"}</b></div>)}</SettingsSection>
-              <SettingsSection title="Privacy"><p className="sf-settings-muted">Captured streams, project data, and recordings stay on this device. StreamForge does not upload your media.</p></SettingsSection>
+              <SettingsSection title="Privacy"><p className="sf-settings-muted">Captured streams, project data, and recordings stay on this device. OnMix does not upload your media.</p></SettingsSection>
             </>}
           </div>
         </div>

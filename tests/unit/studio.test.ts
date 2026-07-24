@@ -31,6 +31,6 @@ describe("geometry", () => {
 describe("recording and persistence helpers", () => {
   it("selects the first supported recording MIME type", () => { const mock={isTypeSupported:vi.fn((type:string)=>type.includes("vp8"))} as unknown as typeof MediaRecorder; expect(selectMimeType(mock)).toBe("video/webm;codecs=vp8,opus"); });
   it("returns null without MediaRecorder support", () => expect(selectMimeType(undefined)).toBeNull());
-  it("generates deterministic safe filenames", () => expect(recordingFilename(new Date(2026,6,22,14,30,5))).toBe("StreamForge_2026-07-22_14-30-05.webm"));
+  it("generates deterministic safe filenames", () => expect(recordingFilename(new Date(2026,6,22,14,30,5))).toBe("OnMix_2026-07-22_14-30-05.webm"));
   it("migrates unversioned project data", () => expect((migrateProject({name:"old"}) as {version:number}).version).toBe(2));
 });
