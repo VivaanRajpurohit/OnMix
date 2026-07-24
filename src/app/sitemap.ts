@@ -3,7 +3,7 @@ import { siteUrl } from "@/lib/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [{
-    url: siteUrl.origin,
+    url: siteUrl.href,
     lastModified: new Date(),
     changeFrequency: "monthly",
     priority: 1,
