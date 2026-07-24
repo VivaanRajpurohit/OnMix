@@ -31,3 +31,4 @@ yarn-error.log*
 /src/app/icon.png
 
 .vercel
+.env*
