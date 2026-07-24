@@ -1,13 +1,15 @@
-# StreamForge Studio
+# OnMix
 
-[![CI](https://github.com/VivaanRajpurohit/Volunteer-Hour-Tracking-app/actions/workflows/ci.yml/badge.svg)](https://github.com/VivaanRajpurohit/Volunteer-Hour-Tracking-app/actions/workflows/ci.yml)
+[![CI](https://github.com/VivaanRajpurohit/OnMix/actions/workflows/ci.yml/badge.svg)](https://github.com/VivaanRajpurohit/OnMix/actions/workflows/ci.yml)
 ![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=next.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
 ![Local first](https://img.shields.io/badge/privacy-local--first-2F855A)
 
-StreamForge Studio is a production-minded, browser-based composition and recording workspace. It brings an OBS-inspired desktop workflow to the web while keeping projects, capture streams, uploaded media, and recordings on the user's device.
+OnMix is a production-minded, browser-based composition and recording workspace. It brings an OBS-inspired desktop workflow to the web while keeping projects, capture streams, uploaded media, and recordings on the user's device.
 
-![StreamForge Studio interface](./docs/images/streamforge-studio.png)
+**Live app:** [onmix.vercel.app](https://onmix.vercel.app)
+
+![OnMix interface](./docs/images/onmix.png)
 
 ## Highlights
 
@@ -24,11 +26,11 @@ StreamForge Studio is a production-minded, browser-based composition and recordi
 
 ## Quick start
 
-Requirements: Node.js 20.9+ and a recent desktop Chrome or Edge browser.
+Requirements: Node.js 24 and a recent desktop Chrome or Edge browser.
 
 ```bash
-git clone https://github.com/VivaanRajpurohit/Volunteer-Hour-Tracking-app.git
-cd Volunteer-Hour-Tracking-app
+git clone https://github.com/VivaanRajpurohit/OnMix.git
+cd OnMix
 npm install
 npm run dev
 ```
@@ -62,7 +64,9 @@ The serializable project model is deliberately separate from runtime browser med
 
 ## Privacy and browser constraints
 
-StreamForge does not upload captured content. Browser permission prompts are always user initiated, and removing or exiting a project stops media tracks and revokes object URLs.
+OnMix does not upload captured content. Browser permission prompts are always user initiated, and removing or exiting a project stops media tracks and revokes object URLs.
+
+The hosted surface has no authentication, public mutation API, database, or server-side media storage. Production responses include a restrictive Content Security Policy, permissions policy, anti-framing controls, MIME-sniffing protection, and HSTS. See [SECURITY.md](./SECURITY.md) for private vulnerability reporting.
 
 System-audio availability, recording codecs, and browser-source embedding vary by platform and browser. Direct RTMP credentials are intentionally unsupported; production streaming should use authenticated WebRTC ingest and a server-side media gateway. See [BROWSER_SUPPORT.md](./BROWSER_SUPPORT.md).
 

@@ -50,14 +50,17 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   project: createDefaultProject(), selectedSourceIds: [], previewSceneId: "", programSceneId: "", studioMode: false, saveState: "saved", history: [], future: [], recording: { state: "idle", elapsed: 0 },
   setProject: (project) => set({ project, previewSceneId: project.selectedSceneId, programSceneId: project.selectedSceneId, selectedSourceIds: [], history: [], future: [], saveState: "saved" }),
   setSaveState: (saveState) => set({ saveState }),
-  commit: (mutator) => set((s) => ({ project: updated(mutator(clone(s.project))), history: [...s.history.slice(-49), clone(s.project)], future: [], saveState: "saving" })),
+  commit: (mutator) => set((s) => {
+    const project = updated(mutator(clone(s.project)));
+    return { project, history: [...s.history.slice(-49), clone(s.project)], future: [], saveState: project.ui.preferences?.general.autosave === false ? "unsaved" : "saving" };
+  }),
   addScene: () => get().commit((p) => { const id = createId("scene"); p.scenes.push({ id, name: `Scene ${p.scenes.length + 1}`, sourceIds: [] }); p.selectedSceneId = id; return p; }),
-  removeScene: (id) => { if (get().project.scenes.length <= 1) return; get().commit((p) => { const scene = p.scenes.find((s) => s.id === id); scene?.sourceIds.forEach((sourceId) => delete p.sources[sourceId]); p.scenes = p.scenes.filter((s) => s.id !== id); if (p.selectedSceneId === id) p.selectedSceneId = p.scenes[0].id; return p; }); },
+  removeScene: (id) => { if (get().project.scenes.length <= 1) return; if (typeof window !== "undefined" && get().project.ui.preferences?.general.confirmRemove && !window.confirm("Remove this scene and its sources?")) return; get().commit((p) => { const scene = p.scenes.find((s) => s.id === id); scene?.sourceIds.forEach((sourceId) => delete p.sources[sourceId]); p.scenes = p.scenes.filter((s) => s.id !== id); if (p.selectedSceneId === id) p.selectedSceneId = p.scenes[0].id; return p; }); },
   renameScene: (id, name) => get().commit((p) => { const scene = p.scenes.find((s) => s.id === id); if (scene) scene.name = name; return p; }),
   selectScene: (id) => set((s) => ({ project: { ...s.project, selectedSceneId: id }, previewSceneId: id, programSceneId: s.studioMode ? s.programSceneId : id, selectedSourceIds: [] })),
   reorderScene: (id, delta) => get().commit((p) => { const index = p.scenes.findIndex((s) => s.id === id), target = Math.max(0, Math.min(p.scenes.length - 1, index + delta)); if (index >= 0 && index !== target) [p.scenes[index], p.scenes[target]] = [p.scenes[target], p.scenes[index]]; return p; }),
   addSource: (type) => { const { project } = get(); const scene = project.scenes.find((s) => s.id === project.selectedSceneId)!; const source = createSource(type, scene.id, scene.sourceIds.length); get().commit((p) => { p.sources[source.id] = source; p.scenes.find((s) => s.id === scene.id)!.sourceIds.push(source.id); return p; }); set({ selectedSourceIds: [source.id] }); return source.id; },
-  removeSelectedSources: () => { const ids = get().selectedSourceIds; if (!ids.length) return; get().commit((p) => { p.scenes.forEach((s) => { s.sourceIds = s.sourceIds.filter((id) => !ids.includes(id)); }); ids.forEach((id) => delete p.sources[id]); return p; }); set({ selectedSourceIds: [] }); },
+  removeSelectedSources: () => { const ids = get().selectedSourceIds; if (!ids.length) return; if (typeof window !== "undefined" && get().project.ui.preferences?.general.confirmRemove && !window.confirm(`Remove ${ids.length === 1 ? "this source" : `${ids.length} sources`}?`)) return; get().commit((p) => { p.scenes.forEach((s) => { s.sourceIds = s.sourceIds.filter((id) => !ids.includes(id)); }); ids.forEach((id) => delete p.sources[id]); return p; }); set({ selectedSourceIds: [] }); },
   duplicateSelected: () => { const source = get().project.sources[get().selectedSourceIds[0]]; if (!source) return; get().commit((p) => { const id = createId("source"); const copy = { ...structuredClone(source), id, name: `${source.name} Copy`, transform: { ...source.transform, x: source.transform.x + 24, y: source.transform.y + 24 } }; p.sources[id] = copy; p.scenes.find((s) => s.id === source.sceneId)?.sourceIds.push(id); set({ selectedSourceIds: [id] }); return p; }); },
   selectSource: (id, additive) => set((s) => ({ selectedSourceIds: !id ? [] : additive ? (s.selectedSourceIds.includes(id) ? s.selectedSourceIds.filter((x) => x !== id) : [...s.selectedSourceIds, id]) : [id] })),
   updateSource: (id, patch) => get().commit((p) => { if (p.sources[id]) p.sources[id] = { ...p.sources[id], ...patch } as StudioSource; return p; }),
@@ -72,4 +75,3 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   setRecording: (recording) => set({ recording }),
   newProject: () => get().setProject(createDefaultProject()),
 }));
-

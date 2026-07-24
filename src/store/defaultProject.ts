@@ -2,6 +2,7 @@ import { createId } from "@/lib/ids";
 import { createSource } from "@/lib/sourceFactory";
 import type { StudioProject, TextSource, ColorSource } from "@/types/studio";
 import { CURRENT_PROJECT_VERSION } from "@/engine/persistence/migrations";
+import { createDefaultPreferences } from "./defaultSettings";
 
 export function createDefaultProject(): StudioProject {
   const now = new Date().toISOString();
@@ -16,6 +17,6 @@ export function createDefaultProject(): StudioProject {
     scenes: [{ id: main, name: "Main Scene", sourceIds: [background.id, hint.id] }, { id: camera, name: "Camera", sourceIds: [] }, { id: screen, name: "Screen Share", sourceIds: [] }],
     sources: { [background.id]: background, [hint.id]: hint }, selectedSceneId: main,
     transition: { type: "fade", duration: 300 }, audio: { sampleRate: 48000, masterVolume: 1 },
-    ui: { showGrid: false, showSafeArea: false, snap: true, quickStartDismissed: true, dockWidths: [26, 22, 26, 11, 15], hiddenDocks: [] },
+    ui: { showGrid: false, showSafeArea: false, snap: true, quickStartDismissed: true, dockWidths: [26, 22, 26, 11, 15], hiddenDocks: [], preferences: createDefaultPreferences() },
   };
 }
