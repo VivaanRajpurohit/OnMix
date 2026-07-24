@@ -29,3 +29,5 @@ yarn-error.log*
 # Inherited local assets replaced by the StreamForge brand asset
 /src/app/favicon.ico
 /src/app/icon.png
+
+.vercel

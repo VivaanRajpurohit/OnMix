@@ -1,0 +1,41 @@
+name: Production smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SITE_URL: https://streamforge-live-studio.vercel.app
+    steps:
+      - name: Verify public routes and crawlability
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(curl --retry 3 --retry-all-errors --silent --output /dev/null --write-out '%{http_code}' "$SITE_URL/")" = "200"
+          test "$(curl --retry 3 --retry-all-errors --silent --user-agent 'Googlebot' --output /dev/null --write-out '%{http_code}' "$SITE_URL/robots.txt")" = "200"
+          curl --retry 3 --retry-all-errors --fail --silent "$SITE_URL/robots.txt" | grep --fixed-strings "Allow: /"
+          curl --retry 3 --retry-all-errors --fail --silent "$SITE_URL/sitemap.xml" | grep --fixed-strings "$SITE_URL"
+
+      - name: Verify security headers
+        shell: bash
+        run: |
+          set -euo pipefail
+          headers="$(curl --retry 3 --retry-all-errors --silent --head "$SITE_URL/")"
+          grep --ignore-case '^content-security-policy:' <<<"$headers"
+          grep --ignore-case '^strict-transport-security:' <<<"$headers"
+          grep --ignore-case '^permissions-policy:' <<<"$headers"
+          grep --ignore-case '^x-content-type-options: nosniff' <<<"$headers"
+          grep --ignore-case '^x-frame-options: DENY' <<<"$headers"
+
+      - name: Verify scanner blocking is request-scoped
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' "$SITE_URL/wp-admin")" = "403"
+          test "$(curl --retry 3 --retry-all-errors --silent --output /dev/null --write-out '%{http_code}' "$SITE_URL/")" = "200"

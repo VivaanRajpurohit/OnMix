@@ -26,7 +26,7 @@ StreamForge Studio is a production-minded, browser-based composition and recordi
 
 ## Quick start
 
-Requirements: Node.js 20.9+ and a recent desktop Chrome or Edge browser.
+Requirements: Node.js 24 and a recent desktop Chrome or Edge browser.
 
 ```bash
 git clone https://github.com/VivaanRajpurohit/StreamForge-Studio.git
